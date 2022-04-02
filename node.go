@@ -40,7 +40,10 @@ func NewNode(ctx context.Context, config Config) (*Node, error) {
 
 	logger.Info("###########")
 	logger.Info("I am:", p2pHost.ID())
-	logger.Info("I am @:", p2pHost.Addrs())
+	for _, addr := range p2pHost.Addrs() {
+		fmt.Printf("%s: %s/p2p/%s", "I am @:", addr, p2pHost.ID().Pretty())
+		fmt.Println()
+	}
 	logger.Info("###########")
 	//#########################################
 	kadDHT, err := dht.New(ctx, p2pHost)
@@ -70,23 +73,6 @@ func NewNode(ctx context.Context, config Config) (*Node, error) {
 		}()
 	}
 	wg.Wait()
-	//#########################################
-	/*	kadDHT, err := dht.New(ctx, p2pHost, dht.BootstrapPeersFunc(func() []peer.AddrInfo {
-			boostrapPeerAddrs := make([]peer.AddrInfo, 0, len(config.BootstrapPeers))
-			for _, x := range config.BootstrapPeers {
-				peerInfo, err := peer.AddrInfoFromP2pAddr(x)
-				if err == nil {
-					boostrapPeerAddrs = append(boostrapPeerAddrs, *peerInfo)
-				}
-			}
-			return boostrapPeerAddrs
-		}))
-		if err != nil {
-			return nil, err
-		}*/
-
-	// Bootstrap the DHT. In the default configuration, this spawns a Background
-	// thread that will refresh the peer table every five minutes.
 	return &Node{KadDHT: kadDHT, Host: p2pHost}, nil
 }
 
@@ -101,23 +87,25 @@ func (node Node) AdvertiseAndFindPeers(ctx context.Context, cfg Config) {
 	// Now, look for others who have announced
 	// This is like your friend telling you the location to meet you.
 	for {
-		peersChan, err := routingDiscovery.FindPeers(ctx, cfg.Rendezvous)
+		peers, err := routingDiscovery.FindPeers(ctx, cfg.Rendezvous)
 		if err != nil {
 			logger.Error("error finding peers: ", err)
 		}
-		for peer := range peersChan {
-			if peer.ID == node.Host.ID() {
+		for p := range peers {
+			if p.ID == node.Host.ID() {
 				continue
 			}
-			logger.Info("found peers: ", peer.ID, peer.Addrs)
-			status := node.Host.Network().Connectedness(peer.ID)
+			logger.Info("found peers: ")
+			for _, addr := range p.Addrs {
+				fmt.Printf("%s/p2p/%s", addr, p.ID.Pretty())
+				fmt.Println()
+			}
+			status := node.Host.Network().Connectedness(p.ID)
 			if status == network.CanConnect || status == network.NotConnected {
-				_, err = node.Host.Network().DialPeer(ctx, peer.ID)
-				if err != nil {
-					node.Host.Network().Peerstore().RemovePeer(peer.ID) // TODO: remove peer?
-					logger.Error("error dialing found peer: ", peer.ID, " ", err)
+				if err := node.Host.Connect(ctx, p); err != nil {
+					logger.Error("Connection failed:", err)
 				} else {
-					logger.Debug("connected to peer: ", peer.ID)
+					logger.Info("connected to peer: ", p.ID)
 				}
 			}
 		}
