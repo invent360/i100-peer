@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package="/message";
+
+service Message {
+  rpc MessagePeer(MessageRequest) returns (MessageResponse);
+  rpc SubscribeToPeer(stream MessageRequest) returns (stream MessageResponse);
+}
+
+message MessageRequest {
+  string title = 1;
+  string payload = 2;
+}
+
+message MessageResponse {
+  string feedback = 1;
+}
+

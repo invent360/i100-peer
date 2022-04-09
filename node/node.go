@@ -1,12 +1,15 @@
-package main
+package node
 
 import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	mrand "math/rand"
+	"strings"
 	"sync"
 
+	"github.com/i101-p2p/cmd/config"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -14,6 +17,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	discovery "github.com/libp2p/go-libp2p-discovery"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
+	libp2pquic "github.com/libp2p/go-libp2p-quic-transport"
+	"github.com/libp2p/go-tcp-transport"
 	"github.com/multiformats/go-multiaddr"
 )
 
@@ -22,12 +27,12 @@ type Node struct {
 	KadDHT *dht.IpfsDHT
 }
 
-func NewNode(ctx context.Context, config Config) (*Node, error) {
+func NewNode(ctx context.Context, config config.Config) (*Node, error) {
 	var r io.Reader
 
 	r = mrand.New(mrand.NewSource(config.Seed))
 
-	priv, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, r)
+	privateKey, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, r)
 	if err != nil {
 		return nil, err
 	}
@@ -35,16 +40,26 @@ func NewNode(ctx context.Context, config Config) (*Node, error) {
 	addr, _ := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", config.Port))
 	p2pHost, err := libp2p.New(
 		libp2p.ListenAddrs(addr),
-		libp2p.Identity(priv),
+		libp2p.Identity(privateKey),
+		libp2p.DefaultSecurity,
+		libp2p.NATPortMap(),
+		libp2p.DefaultMuxers,
+		libp2p.Transport(libp2pquic.NewTransport),
+		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.FallbackDefaults,
 	)
 
-	logger.Info("###########")
-	logger.Info("I am:", p2pHost.ID())
+	if err != nil {
+		fmt.Printf("errpr creating p2p host %s", err)
+	}
+
+	log.Println("###########")
+	log.Println("I am:", p2pHost.ID())
 	for _, addr := range p2pHost.Addrs() {
 		fmt.Printf("%s: %s/p2p/%s", "I am @:", addr, p2pHost.ID().Pretty())
 		fmt.Println()
 	}
-	logger.Info("###########")
+	log.Println("###########")
 	//#########################################
 	kadDHT, err := dht.New(ctx, p2pHost)
 	if err != nil {
@@ -53,7 +68,7 @@ func NewNode(ctx context.Context, config Config) (*Node, error) {
 
 	// Bootstrap the DHT. In the default configuration, this spawns a Background
 	// thread that will refresh the peer table every five minutes.
-	logger.Debug("bootstrapping the DHT")
+	log.Println("bootstrapping the DHT")
 	if err = kadDHT.Bootstrap(ctx); err != nil {
 		return nil, err
 	}
@@ -66,9 +81,9 @@ func NewNode(ctx context.Context, config Config) (*Node, error) {
 		go func() {
 			defer wg.Done()
 			if err := p2pHost.Connect(ctx, *peerInfo); err != nil {
-				logger.Warn(err)
+				log.Println(err)
 			} else {
-				logger.Info("Connection established with bootstrap node:", *peerInfo)
+				log.Println("Connection established with bootstrap node:", *peerInfo)
 			}
 		}()
 	}
@@ -76,36 +91,43 @@ func NewNode(ctx context.Context, config Config) (*Node, error) {
 	return &Node{KadDHT: kadDHT, Host: p2pHost}, nil
 }
 
-func (node Node) AdvertiseAndFindPeers(ctx context.Context, cfg Config) {
+func (node Node) AdvertiseAndFindPeers(ctx context.Context, cfg config.Config) {
 	// We use a rendezvous point "meet me here" to announce our location.
 	// This is like telling your friends to meet you at the Eiffel Tower.
-	logger.Info("Announcing ourselves...")
+	log.Println("Announcing ourselves...")
 	routingDiscovery := discovery.NewRoutingDiscovery(node.KadDHT)
 	discovery.Advertise(ctx, routingDiscovery, cfg.Rendezvous)
-	logger.Info("Successfully announced!")
+	log.Println("Successfully announced!")
 
 	// Now, look for others who have announced
 	// This is like your friend telling you the location to meet you.
 	for {
 		peers, err := routingDiscovery.FindPeers(ctx, cfg.Rendezvous)
 		if err != nil {
-			logger.Error("error finding peers: ", err)
+			log.Printf("error finding peers: ", err)
 		}
 		for p := range peers {
 			if p.ID == node.Host.ID() {
 				continue
 			}
-			logger.Info("found peers: ")
+			log.Println("found peers: ")
 			for _, addr := range p.Addrs {
 				fmt.Printf("%s/p2p/%s", addr, p.ID.Pretty())
 				fmt.Println()
+				//fmt.Println("--------------NewMultiaddr-----------------")
+				//fmt.Println(ma.NewMultiaddr(addr.String()))
+				//fmt.Println("--------------AddrInfoFromP2pAddr-----------------")
+				//fmt.Println(peer.AddrInfoFromP2pAddr(addr))
 			}
 			status := node.Host.Network().Connectedness(p.ID)
 			if status == network.CanConnect || status == network.NotConnected {
+				fmt.Println(p.Addrs[1].String())
+				fmt.Println(fmt.Sprintf("%s:%s", strings.Split(p.Addrs[0].String(), "/")[2], strings.Split(p.Addrs[0].String(), "/")[4]))
 				if err := node.Host.Connect(ctx, p); err != nil {
-					logger.Error("Connection failed:", err)
+					log.Printf("Connection failed:", err)
 				} else {
-					logger.Info("connected to peer: ", p.ID)
+					log.Println("connected to peer: ", p.ID)
+					//go client.RunClient(p.Addrs[0].String())
 				}
 			}
 		}
