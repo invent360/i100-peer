@@ -50,7 +50,7 @@ func main() {
 
 
 	// Create working directory
-	_, err = exec.Command("mkdir", "-p", "/etc/k0s").Output()
+	_, err = exec.Command("sudo mkdir", "-p", "/etc/k0s").Output()
 
 	if err != nil {
 		log.Fatal(err)
