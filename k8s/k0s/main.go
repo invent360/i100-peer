@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"time"
 )
 
 func main() {
@@ -93,6 +94,8 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Println(string(startOut))
+
+	time.Sleep(5 * time.Second)
 
 	//Start controller
 	statusOut, err := exec.Command("k0s", "status").Output()
