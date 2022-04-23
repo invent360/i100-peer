@@ -51,8 +51,34 @@ func main() {
 
 	// Create working directory
 	err = os.Mkdir("/etc/k0s", 0755)
-
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Create working directory
+	err = os.Chdir("/etc/k0s")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create config file
+	cfgOut, err := exec.Command("k0s config create").Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(string(cfgOut))
+
+	//Install controller
+	ctrOut, err := exec.Command("k0s install controller", "-c", "/etc/k0s/k0s.yaml").Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(string(ctrOut))
+
+	//Start controller
+	startOut, err := exec.Command("k0s start").Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(string(startOut))
 }
