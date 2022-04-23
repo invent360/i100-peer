@@ -62,7 +62,7 @@ func main() {
 	}
 
 	// Create config file
-	out, err := exec.Command("k0s config create").Output()
+	out, err := exec.Command("k0s", "config", "create").Output()
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
 	}
