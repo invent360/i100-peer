@@ -110,26 +110,29 @@ func (node Node) AdvertiseAndFindPeers(ctx context.Context, cfg config.Config) {
 			if p.ID == node.Host.ID() {
 				continue
 			}
-			log.Println("found peers: ")
-			for _, addr := range p.Addrs {
-				fmt.Printf("%s/p2p/%s", addr, p.ID.Pretty())
-				fmt.Println()
-				//fmt.Println("--------------NewMultiaddr-----------------")
-				//fmt.Println(ma.NewMultiaddr(addr.String()))
-				//fmt.Println("--------------AddrInfoFromP2pAddr-----------------")
-				//fmt.Println(peer.AddrInfoFromP2pAddr(addr))
-			}
-			status := node.Host.Network().Connectedness(p.ID)
-			if status == network.CanConnect || status == network.NotConnected {
-				fmt.Println(p.Addrs[1].String())
-				fmt.Println(fmt.Sprintf("%s:%s", strings.Split(p.Addrs[0].String(), "/")[2], strings.Split(p.Addrs[0].String(), "/")[4]))
-				if err := node.Host.Connect(ctx, p); err != nil {
-					log.Printf("Connection failed:", err)
-				} else {
-					log.Println("connected to peer: ", p.ID)
-					//go client.RunClient(p.Addrs[0].String())
+			if len(p.Addrs) > 0 {
+				log.Println("found peers: ")
+				for _, addr := range p.Addrs {
+					fmt.Printf("%s/p2p/%s", addr, p.ID.Pretty())
+					fmt.Println()
+					//fmt.Println("--------------NewMultiaddr-----------------")
+					//fmt.Println(ma.NewMultiaddr(addr.String()))
+					//fmt.Println("--------------AddrInfoFromP2pAddr-----------------")
+					//fmt.Println(peer.AddrInfoFromP2pAddr(addr))
+				}
+				status := node.Host.Network().Connectedness(p.ID)
+				if status == network.CanConnect || status == network.NotConnected {
+					fmt.Println(p.Addrs[1].String())
+					fmt.Println(fmt.Sprintf("%s:%s", strings.Split(p.Addrs[0].String(), "/")[2], strings.Split(p.Addrs[0].String(), "/")[4]))
+					if err := node.Host.Connect(ctx, p); err != nil {
+						log.Printf("Connection failed:", err)
+					} else {
+						log.Println("connected to peer: ", p.ID)
+						//go client.RunClient(p.Addrs[0].String())
+					}
 				}
 			}
+
 		}
 	}
 }

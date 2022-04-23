@@ -291,10 +291,12 @@ func PeriodicBroadcast(net *TopicNetwork) {
 		time.Sleep(time.Second * periodicIHAVE)
 		peers := net.ps.ListPeers(protocolTopicName)
 		log.Printf("- Found %d other peers in the network: %s\n", len(peers), peers)
-		if len(net.Headers) > 0 {
-			if err := net.Publish(net.Headers); err != nil {
-				log.Println("- Error publishing IHAVE message on the network:", err)
-			}
+
+		messages := []string{"test 1", "test 2", "test 3"}
+
+		if err := net.Publish(messages); err != nil {
+			log.Println("- Error publishing IHAVE message on the network:", err)
 		}
 	}
+
 }
