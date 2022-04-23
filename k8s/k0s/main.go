@@ -9,6 +9,8 @@ import (
 )
 
 func main() {
+	Reset()
+
 	curlOut := exec.Command("curl", "https://get.k0s.sh", "-sSLf")
 	sudoCmd := exec.Command("sudo", "sh")
 
@@ -73,7 +75,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("cmd.Run() failed with %s\n", err)
 	}
-	log.Printf("combined out:\n%s\n", string(out))
 	err = os.WriteFile("/etc/k0s/k0s.yaml", out, 0755)
 	if err != nil {
 		log.Fatal(err)
@@ -99,4 +100,19 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Println(string(statusOut))
+}
+
+
+func Reset(){
+	stopOut, err := exec.Command("k0s", "stop").Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(string(stopOut))
+
+	resetOut, err := exec.Command("k0s", "reset").Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(string(resetOut))
 }
