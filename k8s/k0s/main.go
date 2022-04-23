@@ -47,4 +47,12 @@ func main() {
 
 	log.Println(wr)
 
+
+
+	// Create working directory
+	_, err = exec.Command("mkdir", "-p", "/etc/k0s").Output()
+
+	if err != nil {
+		log.Fatal(err)
+	}
 }
