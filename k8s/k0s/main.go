@@ -50,9 +50,11 @@ func main() {
 
 
 	// Create working directory
-	err = os.Mkdir("/etc/k0s", 0755)
-	if err != nil {
-		log.Fatal(err)
+	if _, err := os.Stat("/etc/k0s"); os.IsNotExist(err) {
+		err := os.Mkdir("/etc/k0s", 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Create working directory
@@ -60,6 +62,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 
 	// Create config file
 	out, err := exec.Command("k0s", "config", "create").Output()
@@ -85,4 +88,11 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Println(string(startOut))
+
+	//Start controller
+	statusOut, err := exec.Command("k0s", "status").Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(string(statusOut))
 }
