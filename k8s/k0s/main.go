@@ -62,7 +62,7 @@ func main() {
 	}
 
 	// Create config file
-	cfgOut, err := exec.Command("k0s config create").Output()
+	cfgOut, err := exec.Command("k0s config create", ">", "/etc/k0s/k0s.yaml").Output()
 	if err != nil {
 		log.Fatal(err)
 	}
