@@ -62,11 +62,20 @@ func main() {
 	}
 
 	// Create config file
-	cfgOut, err := exec.Command("k0s config create", ">", "/etc/k0s/k0s.yaml").Output()
+	cmd := exec.Command("k0s config create")
+
+	// open the out file for writing
+	outfile, err := os.Create("/etc/k0s/k0s.yaml")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	log.Println(string(cfgOut))
+	defer outfile.Close()
+	cmd.Stdout = outfile
+
+	err = cmd.Start(); if err != nil {
+		panic(err)
+	}
+	cmd.Wait()
 
 	//Install controller
 	ctrOut, err := exec.Command("k0s install controller", "-c", "/etc/k0s/k0s.yaml").Output()
