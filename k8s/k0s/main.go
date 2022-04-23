@@ -48,13 +48,17 @@ func main() {
 	log.Println(wr)
 
 
-
-	// Create working directory
-	if _, err := os.Stat("/etc/k0s"); os.IsNotExist(err) {
-		err := os.Mkdir("/etc/k0s", 0755)
+	if _, err := os.Stat("/etc/k0s"); !os.IsNotExist(err) {
+		err := os.RemoveAll("/etc/k0s")
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
+
+	// Create working directory
+	err = os.Mkdir("/etc/k0s", 0755)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// Create working directory
